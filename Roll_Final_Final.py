@@ -1,0 +1,102 @@
+import tkinter as tk
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import numpy as np
+import random
+
+# Create a root window for the application
+root = tk.Tk()
+root.title("Dice Game")
+root.geometry("500x600")  # Set the size of the window
+
+# Create input fields for the number of players and rolls
+player_label = tk.Label(root, text="Number of Players")
+player_label.pack()
+player_entry = tk.Entry(root)
+player_entry.pack()
+
+roll_label = tk.Label(root, text="Number of Rolls")
+roll_label.pack()
+roll_entry = tk.Entry(root)
+roll_entry.pack()
+
+# Initialize results
+results = []
+
+# Function to generate results
+def simulate():
+    global results, rolls, num_players
+    num_players = int(player_entry.get())
+    num_rolls = int(roll_entry.get())
+    rolls = [random.randint(1, 6) for _ in range(num_rolls)]
+    results = []
+    for i in range(num_players):
+        results.append([])
+        results[i].append(random.randint(1, 10))
+        current_position = results[i][0]
+        while current_position < len(rolls):
+            results[i].append(rolls[current_position])
+            current_position += results[i][-1]
+
+
+# Function to display steps
+def display_steps():
+    steps_window = tk.Toplevel(root)
+    steps_window.title("Steps for Each Player")
+    text_box = tk.Text(steps_window)
+    text_box.pack()
+    for i, player_steps in enumerate(results, start=1):
+        text_box.insert(tk.END, f"Player {i}: {player_steps}\n")
+
+# Function to calculate average
+def calculate_average():
+    average_numbers = []
+    for i in range(len(rolls)):
+        total = sum(results[j][i] for j in range(num_players) if i < len(results[j]))
+        average = total / num_players
+        average_numbers.append(average)
+    return average_numbers
+
+# Function to plot results
+def plot_results(plot_type):
+    fig = Figure(figsize=(5, 4), dpi=100)
+    ax1 = fig.add_subplot(111)
+
+    if plot_type == "average":
+        average_numbers = calculate_average()
+        ax1.plot(average_numbers, label="Average")
+    elif plot_type == "std_dev":
+        std_devs = [np.std([player_steps[i] for player_steps in results if i < len(player_steps)]) for i in range(max(map(len, results)))]
+        ax1.plot(std_devs, label="Standard Deviation")
+    # Add more elif conditions here for other plot types
+
+    ax1.set_xlabel('Steps')
+    ax1.set_ylabel('Number')
+    ax1.legend()
+    ax1.set_title(f'{plot_type.capitalize()} for Each Player Over Steps')
+
+    new_window = tk.Toplevel(root)
+    new_window.title("Plot")
+    canvas = FigureCanvasTkAgg(fig, master=new_window)
+    canvas.draw()
+    canvas.get_tk_widget().pack()
+
+# Create a button to simulate the game
+simulate_button = tk.Button(root, text="Simulate", command=simulate)
+simulate_button.pack()
+
+# Create a button to display steps
+step_button = tk.Button(root, text="Step", command=display_steps)
+step_button.pack()
+
+# Create buttons for different types of charts
+average_button = tk.Button(root, text="Average", command=lambda: plot_results("average"))
+average_button.pack()
+
+std_dev_button = tk.Button(root, text="Standard Deviation", command=lambda: plot_results("std_dev"))
+std_dev_button.pack()
+
+# Add more buttons here for other plot types
+
+# Run the main event loop for the application
+root.mainloop()
